@@ -1,146 +1,143 @@
-version: '2'
-services: 
-  db:
-    container_name: ${APP_NAME}-db
-    image: kartoza/postgis:9.4-2.1
-    volumes:
-        - ./pg/postgres_data:/var/lib/postgresql
-        - ./backups:/backups
-    environment:
-        - USERNAME=docker
-        - PASS=docker
-    restart: always
-  nginx:
-    container_name: ${APP_NAME}-nginx
-    image: nginx
-    hostname: nginx
-    volumes:
-      - ./nginx-conf:/etc/nginx/conf.d
-    ports:
-      - "0.0.0.0:80:80"
-    restart: always
-
-  smtp:
-    container_name: ${APP_NAME}-smtp
-    image: catatnight/postfix
-    hostname: postfix
-    environment:
-      # You could change this to something more suitable
-      - maildomain=kartoza.com
-      - smtp_user=noreply:docker
-    restart: always
-
-  uwsgi-base:
-    # Note you cannot scale if you use conteiner_name
-    container_name: ${APP_NAME}-uwsgi-base
-    build: docker
-    hostname: uwsgi
-    environment:
-      - DATABASE_NAME=gis
-      - DATABASE_USERNAME=docker
-      - DATABASE_PASSWORD=docker
-      - DATABASE_HOST=db
-      - DJANGO_SETTINGS_MODULE=core.settings.prod_docker
-      - VIRTUAL_HOST=${APP_NAME}.kartoza.com
-      - VIRTUAL_PORT=8080
-      # Set your locale - you need to ensure this is created in Dockerfile too...
-      - LC_ALL=en_ZA.UTF-8
-    volumes:
-      - ../django_project:/home/web/django_project
-      - ./static:/home/web/static:rw
-      - ./media:/home/web/media:rw
-      - ./reports:/home/web/reports
-      - ./logs:/var/log/
-    user: root
-
-  uwsgi-ephemeral:
-    container_name: ${APP_NAME}-uwsgi-base
-    extends: uwsgi-base
-    links:
-      - smtp:smtp
-      - db:db
-    user: root
-    restart: on-failure:5
-
-  uwsgi:
-    # Note you cannot scale if you use conteiner_name
-    container_name: ${APP_NAME}-uwsgi
-    extends: uwsgi-base
-    links:
-      - smtp:smtp
-      - db:db
-    restart: always
-
-  dbbackups:
-    # Note you cannot scale if you use conteiner_name
-    container_name: ${APP_NAME}-dbbackups
-    image: kartoza/pg-backup:9.4
-    hostname: pg-backups
-    volumes:
+db:
+  container_name: ${APP_NAME}-db
+  image: kartoza/postgis:9.4-2.1
+  volumes:
+      - ./setup_data:/home/setup
       - ./backups:/backups
-    links:
-      - db:db
-    environment:
-      # take care to let the project name below match that
-      # declared in the top of the makefile
-      - DUMPPREFIX=PG_${APP_NAME}
-      # These are all defaults anyway, but setting explicitly in
-      # case we ever want to ever use different credentials
-      - PGUSER=docker
-      - PGPASSWORD=docker
-      - PGPORT=5432
-      - PGHOST=db
-      - PGDATABASE=gis
-    restart: always
+  environment:
+      - USERNAME=docker
+      - PASS=docker
+  restart: always
+nginx:
+  container_name: ${APP_NAME}-nginx
+  image: nginx
+  hostname: nginx
+  volumes:
+    - ./nginx-conf:/etc/nginx/conf.d
+  ports:
+    - "0.0.0.0:80:80"
+  restart: always
 
-  # This is normally the main entry point for a production server
-  web:
-    # Note you cannot scale if you use conteiner_name
-    container_name: ${APP_NAME}-web
-    image: nginx
-    hostname: nginx
-    volumes:
-      - ./sites-enabled:/etc/nginx/conf.d:ro
-      # I dont use volumes_from as I want to use the ro modifier
-      - ./static:/home/web/static:ro
-      - ./media:/home/web/media:ro
-      - ./logs:/var/log/nginx
-    links:
-      - uwsgi:uwsgi
-    ports:
-      - "${PROD_WEB_PORT}:8080"
-    restart: always
-  # This is the entry point for a development server.
-  # Run with --no-deps to run attached to the services
-  # from produ environment if wanted
+smtp:
+  container_name: ${APP_NAME}-smtp
+  image: catatnight/postfix
+  hostname: postfix
+  environment:
+    # You could change this to something more suitable
+    - maildomain=kartoza.com
+    - smtp_user=noreply:docker
+  restart: always
 
-  devweb:
-    # Note you cannot scale if you use conteiner_name
-    container_name: ${APP_NAME}-dev-web
-    build:
-      context: docker
-      dockerfile: Dockerfile-dev
-    hostname: ${APP_NAME}-dev-web
-    environment:
-      - DATABASE_NAME=gis
-      - DATABASE_USERNAME=docker
-      - DATABASE_PASSWORD=docker
-      - DATABASE_HOST=db
-      - DJANGO_SETTINGS_MODULE=core.settings.prod_docker
-      - PYTHONPATH=/home/web/django_project
-      - VIRTUAL_HOST=${APP_NAME}.kartoza.com
-      - VIRTUAL_PORT=8080
-    volumes:
-      - ../django_project:/home/web/django_project
-      - ./static:/home/web/static
-      - ./media:/home/web/media
-      - ./reports:/home/web/reports
-      - ./logs:/var/log/
-    links:
-      - smtp:smtp
-      - db:db
-    ports:
-      # for django test server
-      - "${DEV_WEB_PORT}:8080"
-      # for ssh
-      - "${DEV_SSH_PORT}:22"
+uwsgi-base:
+  # Note you cannot scale if you use conteiner_name
+  container_name: ${APP_NAME}-uwsgi-base
+  build: docker
+  hostname: uwsgi
+  environment:
+    - DATABASE_NAME=gis
+    - DATABASE_USERNAME=docker
+    - DATABASE_PASSWORD=docker
+    - DATABASE_HOST=db
+    - DJANGO_SETTINGS_MODULE=core.settings.prod_docker
+    - VIRTUAL_HOST=${APP_NAME}.kartoza.com
+    - VIRTUAL_PORT=8080
+    # Set your locale - you need to ensure this is created in Dockerfile too...
+    - LC_ALL=en_ZA.UTF-8
+  volumes:
+    - ../django_project:/home/web/django_project
+    - ./static:/home/web/static:rw
+    - ./media:/home/web/media:rw
+    - ./reports:/home/web/reports
+    - ./logs:/var/log/
+  user: root
+
+uwsgi-ephemeral:
+  container_name: ${APP_NAME}-uwsgi-base
+  extends: uwsgi-base
+  links:
+    - smtp:smtp
+    - db:db
+  user: root
+  restart: on-failure:5
+
+uwsgi:
+  # Note you cannot scale if you use conteiner_name
+  container_name: ${APP_NAME}-uwsgi
+  extends: uwsgi-base
+  links:
+    - smtp:smtp
+    - db:db
+  restart: always
+
+dbbackups:
+  # Note you cannot scale if you use conteiner_name
+  container_name: ${APP_NAME}-dbbackups
+  image: kartoza/pg-backup:9.4
+  hostname: pg-backups
+  volumes:
+    - ./backups:/backups
+  links:
+    - db:db
+  environment:
+    # take care to let the project name below match that
+    # declared in the top of the makefile
+    - DUMPPREFIX=PG_${APP_NAME}
+    # These are all defaults anyway, but setting explicitly in
+    # case we ever want to ever use different credentials
+    - PGUSER=docker
+    - PGPASSWORD=docker
+    - PGPORT=5432
+    - PGHOST=db
+    - PGDATABASE=gis
+  restart: always
+
+# This is normally the main entry point for a production server
+web:
+  # Note you cannot scale if you use conteiner_name
+  container_name: ${APP_NAME}-web
+  image: nginx
+  hostname: nginx
+  volumes:
+    - ./sites-enabled:/etc/nginx/conf.d:ro
+    # I dont use volumes_from as I want to use the ro modifier
+    - ./static:/home/web/static:ro
+    - ./media:/home/web/media:ro
+    - ./logs:/var/log/nginx
+  links:
+    - uwsgi:uwsgi
+  ports:
+    - "${PROD_WEB_PORT}:8080"
+  restart: always
+# This is the entry point for a development server.
+# Run with --no-deps to run attached to the services
+# from produ environment if wanted
+
+devweb:
+  # Note you cannot scale if you use conteiner_name
+  container_name: ${APP_NAME}-dev-web
+  build: docker
+  dockerfile: Dockerfile-dev
+  hostname: ${APP_NAME}-dev-web
+  environment:
+    - DATABASE_NAME=gis
+    - DATABASE_USERNAME=docker
+    - DATABASE_PASSWORD=docker
+    - DATABASE_HOST=db
+    - DJANGO_SETTINGS_MODULE=core.settings.prod_docker
+    - PYTHONPATH=/home/web/django_project
+    - VIRTUAL_HOST=${APP_NAME}.kartoza.com
+    - VIRTUAL_PORT=8080
+  volumes:
+    - ../django_project:/home/web/django_project
+    - ./static:/home/web/static
+    - ./media:/home/web/media
+        - ./reports:/home/web/reports
+    - ./logs:/var/log/
+  links:
+    - smtp:smtp
+    - db:db
+  ports:
+    # for django test server
+    - "${DEV_WEB_PORT}:8080"
+    # for ssh
+    - "${DEV_SSH_PORT}:22"

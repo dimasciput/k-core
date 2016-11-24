@@ -15,6 +15,7 @@ GRAPPELLI_INSTALLED = True
 
 # Extra installed apps - grapelli needs to be added before others
 INSTALLED_APPS += (
+    "compressor",
 )
 
 GRAPPELLI_ADMIN_TITLE = 'Site administration panel'

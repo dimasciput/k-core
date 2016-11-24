@@ -76,17 +76,12 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    'compressor.finders.CompressorFinder',
 )
 
 # import SECRET_KEY into current namespace
 # noinspection PyUnresolvedReferences
 from .secret import SECRET_KEY  # noqa
-
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    "django.template.loaders.filesystem.Loader",
-    "django.template.loaders.app_directories.Loader",
-)
 
 TEMPLATES = [
     {
@@ -107,12 +102,6 @@ TEMPLATES = [
             'context_processors': [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "django.core.context_processors.debug",
-                "django.core.context_processors.i18n",
-                "django.core.context_processors.static",
-                "django.core.context_processors.media",
-                "django.core.context_processors.request",
-                "django.core.context_processors.tz",
             ],
         },
     },

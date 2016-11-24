@@ -1,11 +1,9 @@
 PROJECT_ID := kartozacore
-PRODUCTION_HOST := kartoza4
-PROD_WEB_PORT := 61100
-DEV_WEB_PORT := 61103
-DEV_SSH_PORT := 61102
+PRODUCTION_HOST := kartoza5
+
 export DEV_WEB_PORT = 61103
-export DEV_SSH_PORT = 61103
-export PROD_WEB_PORT = 61103
+export DEV_SSH_PORT = 61102
+export PROD_WEB_PORT = 61100
 export APP_NAME = kartozacore
 
 
